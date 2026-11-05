@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ED Survey</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--navy:#12304f;--red:#c62828;--ink:#1b2733;--mut:#5d6b78;--line:#d6dee6;--soft:#f3f6f9;--sel:#e7f0fb;--selb:#2f6fb5;--bg:#eef2f6;--card:#fff}
+@media (prefers-color-scheme:dark){:root{--navy:#9cc3ee;--red:#ff7b72;--ink:#e6edf3;--mut:#9aa8b5;--line:#2c3a48;--soft:#17212b;--sel:#1b3150;--selb:#6aa7ea;--bg:#0e151c;--card:#141d26}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"SF Arabic","Segoe UI",Tahoma,sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:720px;margin:0 auto;padding:16px 16px 60px}
+header{background:linear-gradient(135deg,#12304f,#2f6fb5);color:#fff;border-radius:18px;padding:22px 20px;margin-bottom:16px}
+header .org{font-size:13px;opacity:.85;margin-bottom:8px}
+header h1{margin:0;font-size:23px;line-height:1.3}
+header .ar{direction:rtl;font-size:19px;font-weight:700;margin-top:6px}
+header p{margin:12px 0 0;font-size:14.5px;line-height:1.55;opacity:.95;white-space:pre-line}
+header p.ar{font-weight:500}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0 10px}
+.prog{height:8px;background:var(--line);border-radius:8px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--selb);transition:width .2s}
+.pt{font-size:12.5px;color:var(--mut);margin-top:5px;display:flex;justify-content:space-between}
+h2{font-size:17px;color:var(--navy);margin:26px 2px 10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+h2 .ar{direction:rtl}
+.q{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.q.miss{border-color:var(--red);box-shadow:0 0 0 2px rgba(198,40,40,.15)}
+.qt{font-weight:700;font-size:15.5px;line-height:1.5}
+.qt .n{color:var(--selb);margin-right:6px}
+.qa{direction:rtl;text-align:right;color:var(--mut);font-size:14.5px;line-height:1.6;margin-top:4px}
+.opts{margin-top:12px;display:grid;gap:8px}
+label.o{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:11px;padding:11px 12px;cursor:pointer;background:var(--soft);font-size:15px;line-height:1.45}
+label.o input{margin:3px 0 0;width:18px;height:18px;flex:none;accent-color:var(--selb)}
+label.o:has(input:checked){border-color:var(--selb);background:var(--sel)}
+label.o>span{flex:1}
+label.o .oa{display:block;direction:rtl;text-align:right;color:var(--mut);font-size:13.5px}
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}
+.scale label.o{justify-content:center;flex-direction:column;align-items:center;text-align:center;padding:10px 4px;font-weight:700}
+.scale label.o input{margin:0}
+.sl{display:flex;justify-content:space-between;font-size:12.5px;color:var(--mut);margin-top:6px}
+textarea,input.emp{width:100%;margin-top:12px;border:1.5px solid var(--line);border-radius:11px;padding:11px;font:inherit;font-size:16px;background:var(--soft);color:var(--ink)}
+textarea{min-height:90px}
+input.emp{direction:ltr;letter-spacing:1px}
+button.go{width:100%;border:0;border-radius:14px;background:var(--selb);color:#fff;font-size:18px;font-weight:800;padding:16px;margin-top:18px;cursor:pointer}
+button.go:disabled{opacity:.6}
+.err{color:var(--red);font-weight:700;text-align:center;margin-top:10px;min-height:20px;line-height:1.6}
+.box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:30px 20px;text-align:center;line-height:1.7}
+.box .big{font-size:54px;font-weight:800;color:var(--selb)}
+.note{font-size:13px;color:var(--mut);text-align:center;margin-top:16px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="box">Loading… · جاري التحميل</div></div>
+<script src="config.js"></script>
+<script>
+const app=document.getElementById('app');
+const id=new URLSearchParams(location.search).get('s')||'';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ROLE=[
+ {id:"_role",type:"single",t:"Your position",t_ar:"مسمّاك الوظيفي",options:[{en:"Intern",ar:"طبيب امتياز"},{en:"Resident / GP",ar:"طبيب مقيم / عام"},{en:"Specialist",ar:"أخصائي"},{en:"Consultant",ar:"استشاري"}]},
+ {id:"_exp",type:"single",t:"Years of experience in emergency medicine",t_ar:"سنوات الخبرة في طب الطوارئ",options:[{en:"Less than 2",ar:"أقل من سنتين"},{en:"2–5",ar:"2–5"},{en:"6–10",ar:"6–10"},{en:"More than 10",ar:"أكثر من 10"}]}];
+async function rpc(fn,body){
+ const r=await fetch(`${C.url}/rest/v1/rpc/${fn}`,{method:'POST',headers:{apikey:C.anonKey,Authorization:'Bearer '+C.anonKey,'Content-Type':'application/json'},body:JSON.stringify(body)});
+ const d=await r.json().catch(()=>null);if(!r.ok)throw new Error((d&&d.message)||'error');return d}
+function msg(en,ar){app.innerHTML=`<div class="box">${en}<br><span dir="rtl">${ar}</span></div>`}
+function done(d,again){
+ const sc=d&&d.score!=null?`<div>Your score · نتيجتك</div><div class="big">${d.score} / ${d.total}</div>`:'';
+ app.innerHTML=`<div class="box">${sc}<p>Thank you for your participation.<br><span dir="rtl">شكراً لمشاركتك.</span></p>${again?'<p style="color:var(--mut);font-size:14px">You have already submitted this survey from this device.<br><span dir="rtl">سبق أن أرسلت هذا الاستبيان من هذا الجهاز.</span></p>':''}</div>`;scrollTo(0,0)}
+(async()=>{
+ if(!id)return msg('No survey selected.','لم يتم تحديد استبيان.');
+ let s;try{s=await rpc('get_survey',{p_id:id})}catch(e){s=null}
+ if(!s)return msg('This survey is closed or not available.','هذا الاستبيان مغلق أو غير متاح.');
+ document.title=s.title;
+ let prev=null;try{prev=JSON.parse(localStorage.getItem('done-'+id))}catch(e){}
+ if(prev)return done(prev,true);
+ const qs=(s.ask_role?ROLE.map(q=>({...q,section:"About you|عنك"})):[]).concat(s.questions);
+ let n=0,sec=null,html='';
+ if(s.ask_emp)html+=`<h2><span>Identification</span><span class="ar">التعريف</span></h2><div class="q" id="q-_emp"><div class="qt">Employee number</div><div class="qa">الرقم الوظيفي</div><input class="emp" id="emp" inputmode="numeric" autocomplete="off" maxlength="12"></div>`;
+ for(const q of qs){
+  if((q.section||'')!==sec){sec=q.section||'';if(sec){const[a,b]=sec.split('|');html+=`<h2><span>${esc(a)}</span><span class="ar">${esc(b||'')}</span></h2>`}}
+  const num=q.id[0]==='_'?'':`<span class="n">${++n}.</span>`;let body;
+  if(q.type==='text')body=`<textarea name="${q.id}" maxlength="1500"></textarea>`;
+  else if(q.type==='scale')body=`<div class="scale">${[1,2,3,4,5].map(v=>`<label class="o"><input type="radio" name="${q.id}" value="${v}">${v}</label>`).join('')}</div><div class="sl"><span>Low · منخفض</span><span>High · مرتفع</span></div>`;
+  else body=`<div class="opts">${(q.options||[]).map((o,i)=>`<label class="o"><input type="${q.type==='multi'?'checkbox':'radio'}" name="${q.id}" value="${i}"><span>${esc(o.en||o.ar)}${o.ar&&o.ar!==o.en&&o.en?`<span class="oa">${esc(o.ar)}</span>`:''}</span></label>`).join('')}</div>`;
+  html+=`<div class="q" id="q-${q.id}"><div class="qt">${num}${esc(q.t||q.t_ar)}${q.optional?' <span style="color:var(--mut);font-weight:500">(optional · اختياري)</span>':''}</div>${q.t_ar&&q.t?`<div class="qa">${esc(q.t_ar)}</div>`:''}${body}</div>`;
+ }
+ app.innerHTML=`<header><div class="org">Emergency Department · Samtah General Hospital · قسم الطوارئ</div><h1>${esc(s.title)}</h1>${s.title_ar?`<div class="ar" dir="rtl">${esc(s.title_ar)}</div>`:''}${s.intro?`<p>${esc(s.intro)}</p>`:''}${s.intro_ar?`<p class="ar" dir="rtl">${esc(s.intro_ar)}</p>`:''}</header>
+ <div class="bar"><div class="prog"><i id="pg"></i></div><div class="pt"><span id="pc"></span><span dir="rtl">نسبة الإنجاز</span></div></div>
+ <form id="f" novalidate>${html}<button class="go" type="submit">Submit · إرسال</button><div class="err" id="err"></div></form>
+ <div class="note">Responses are reviewed only by the ED administration.<br><span dir="rtl">الردود تُراجع من إدارة الطوارئ فقط.</span></div>`;
+ const f=document.getElementById('f');
+ const req=qs.filter(q=>q.type!=='text'&&q.type!=='multi'&&!q.optional).map(q=>q.id);
+ const prog=()=>{const d=req.filter(i=>f.querySelector(`input[name="${i}"]:checked`)).length;document.getElementById('pg').style.width=(100*d/Math.max(1,req.length))+'%';document.getElementById('pc').textContent=d+' / '+req.length};
+ f.addEventListener('change',e=>{prog();const q=e.target.closest('.q');if(q)q.classList.remove('miss')});prog();
+ f.addEventListener('submit',async e=>{
+  e.preventDefault();const err=document.getElementById('err');err.textContent='';
+  const miss=req.filter(i=>!f.querySelector(`input[name="${i}"]:checked`));
+  const emp=s.ask_emp?document.getElementById('emp').value.trim():null;
+  if(s.ask_emp&&!/^[0-9]{3,12}$/.test(emp))miss.unshift('_emp');
+  miss.forEach(i=>document.getElementById('q-'+i).classList.add('miss'));
+  if(miss.length){err.textContent=`Please answer all questions (${miss.length} left) · نرجو إكمال كل الأسئلة`;document.getElementById('q-'+miss[0]).scrollIntoView({behavior:'smooth',block:'center'});return}
+  const a={};for(const q of qs){
+   if(q.type==='text')a[q.id]=f.elements[q.id].value.trim();
+   else if(q.type==='multi')a[q.id]=[...f.querySelectorAll(`input[name="${q.id}"]:checked`)].map(x=>+x.value);
+   else{const x=f.querySelector(`input[name="${q.id}"]:checked`);if(x)a[q.id]=+x.value}}
+  const b=f.querySelector('button.go');b.disabled=true;b.textContent='Sending… · جاري الإرسال';
+  try{const d=await rpc('submit_response',{p_id:id,p_answers:a,p_emp:emp});try{localStorage.setItem('done-'+id,JSON.stringify(d))}catch(x){}done(d)}
+  catch(x){const m=String(x.message);
+   err.innerHTML=m.includes('duplicate')?'This employee number has already submitted.<br>هذا الرقم الوظيفي أرسل الاستبيان من قبل.':m.includes('closed')?'The survey has been closed.<br>تم إغلاق الاستبيان.':'Could not send, please try again.<br>تعذّر الإرسال، حاول مرة ثانية.';
+   b.disabled=false;b.textContent='Submit · إرسال'}
+ });
+})();
+</script>
+</body>
+</html>

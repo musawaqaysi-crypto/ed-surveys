@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>منصة الاستبيانات</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--navy:#12304f;--blue:#2f6fb5;--red:#c62828;--green:#1f7a4d;--amber:#b7791f;--ink:#1b2733;--mut:#5d6b78;--line:#d6dee6;--soft:#f3f6f9;--bg:#eef2f6;--card:#fff}
+@media (prefers-color-scheme:dark){:root{--navy:#9cc3ee;--blue:#6aa7ea;--red:#ff7b72;--green:#4cc38a;--amber:#e3b341;--ink:#e6edf3;--mut:#9aa8b5;--line:#2c3a48;--soft:#17212b;--bg:#0e151c;--card:#141d26}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"SF Arabic","Segoe UI",Tahoma,sans-serif;font-size:15px}
+.top{background:var(--navy);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+@media (prefers-color-scheme:dark){.top{background:#12304f}}
+.top b{font-size:19px}.top button{background:rgba(255,255,255,.15);color:#fff;border:0}
+.wrap{max-width:1100px;margin:0 auto;padding:18px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+h2{margin:0 0 12px;font-size:18px;color:var(--navy)}
+h3{margin:18px 0 8px;font-size:16px;color:var(--navy)}
+button{font:inherit;border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:10px;padding:8px 14px;cursor:pointer}
+button.p{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+button.d{color:var(--red)}
+button.sm{padding:4px 9px;font-size:13px}
+input,textarea,select{font:inherit;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:var(--soft);color:var(--ink);width:100%}
+textarea{min-height:64px;resize:vertical}
+label.f{display:block;font-size:13px;color:var(--mut);margin:8px 0 4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:700px){.grid2{grid-template-columns:1fr}}
+.ltr{direction:ltr;text-align:left}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sv{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;flex-wrap:wrap}
+.sv .t{font-weight:700}.sv .m{font-size:13px;color:var(--mut)}
+.pill{font-size:12px;border-radius:20px;padding:2px 10px;font-weight:700}
+.pill.on{background:#e3f4ea;color:var(--green)}.pill.off{background:#f1e4e4;color:var(--red)}
+@media (prefers-color-scheme:dark){.pill.on{background:#16301f}.pill.off{background:#3a1d1d}}
+.chk{display:flex;gap:8px;align-items:center;margin:6px 0}.chk input{width:auto}
+.qe{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--soft)}
+.qe .hd{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tabs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.kpi .v{font-size:28px;font-weight:800;color:var(--navy)}.kpi .l{font-size:13px;color:var(--mut)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:right;vertical-align:top}
+th{color:var(--mut);font-weight:700;font-size:13px}
+.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden;min-width:80px}
+.bar i{display:block;height:100%}
+.qr{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+#qrbox{background:#fff;padding:10px;border-radius:10px;width:200px;height:200px}
+.msg{color:var(--mut);padding:20px;text-align:center}
+.err{color:var(--red);font-weight:700}
+.opt{font-size:13px;color:var(--mut)}
+.good{color:var(--green);font-weight:700}.bad{color:var(--red);font-weight:700}
+</style>
+</head>
+<body>
+<div class="top"><b>منصة الاستبيانات — الطوارئ</b><span id="who"></span></div>
+<div class="wrap" id="app"><div class="msg">جاري التحميل…</div></div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const sb=supabase.createClient(C.url,C.anonKey);
+const app=document.getElementById('app');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const BASE=location.href.split('#')[0].split('?')[0].replace(/admin\.html$/,'');
+const linkOf=id=>BASE+'?s='+id;
+const ROLES=['Intern · امتياز','Resident/GP · مقيم','Specialist · أخصائي','Consultant · استشاري'];
+const EXPS=['< 2','2–5','6–10','> 10'];
+const TYPES={single:'اختيار واحد',multi:'اختيار متعدد',scale:'مقياس 1–5',text:'نص حر'};
+let surveys=[],cur=null,view='list';
+
+function login(note){
+ document.getElementById('who').innerHTML='';
+ app.innerHTML=`<div class="card" style="max-width:420px;margin:30px auto"><h2>دخول المسؤول</h2>
+ <label class="f">البريد الإلكتروني</label><input id="em" class="ltr" type="email" autocomplete="email">
+ <div class="row" style="margin-top:12px"><button class="p" id="go">أرسل رابط الدخول</button></div><p id="lm" class="opt">${note||'يوصلك رابط على بريدك، افتحه من نفس الجهاز.'}</p></div>`;
+ document.getElementById('go').onclick=async()=>{
+  const email=document.getElementById('em').value.trim();if(!email)return;
+  const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:location.href.split('#')[0]}});
+  document.getElementById('lm').innerHTML=error?`<span class="err">${esc(error.message)}</span>`:'✅ أرسلنا رابط الدخول لبريدك. افتحه من هذا الجهاز.';
+ };
+}
+async function enter(session){
+ if(!session)return login();
+ const {data}=await sb.from('admins').select('user_id').eq('user_id',session.user.id);
+ if(!data||!data.length){await sb.auth.signOut();return login('<span class="err">هذا الحساب ليس مسؤولاً.</span>')}
+ document.getElementById('who').innerHTML=`<button class="sm" id="out">خروج</button>`;
+ document.getElementById('out').onclick=()=>sb.auth.signOut();
+ await loadList();
+}
+// supabase-js deadlocks if the auth callback awaits another Supabase call, so the admin check runs after it returns.
+sb.auth.onAuthStateChange((_ev,session)=>{setTimeout(()=>enter(session),0)});
+
+async function loadList(){
+ const {data,error}=await sb.from('surveys').select('id,title,title_ar,is_open,created_at,ask_emp').order('created_at',{ascending:false});
+ if(error){app.innerHTML=`<div class="card err">${esc(error.message)}</div>`;return}
+ const {data:cnt}=await sb.from('responses').select('survey_id');
+ const n={};(cnt||[]).forEach(r=>n[r.survey_id]=(n[r.survey_id]||0)+1);
+ surveys=data;
+ app.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">الاستبيانات</h2><button class="p" id="new">＋ استبيان جديد</button></div></div>
+ <div class="card">${data.length?data.map(s=>`<div class="sv"><div><div class="t">${esc(s.title_ar||s.title)}</div><div class="m">${esc(s.title_ar?s.title:'')} · ${n[s.id]||0} رد · ${s.ask_emp?'بالرقم الوظيفي':'بدون اسم'} · ${new Date(s.created_at).toLocaleDateString('en-GB')}</div></div>
+  <div class="row"><span class="pill ${s.is_open?'on':'off'}">${s.is_open?'مفتوح':'مغلق'}</span><button data-r="${s.id}">النتائج</button><button data-e="${s.id}">تعديل</button><button data-l="${s.id}">الرابط و QR</button></div></div>`).join(''):'<div class="msg">ما فيه استبيانات للحين.</div>'}</div>`;
+ document.getElementById('new').onclick=()=>edit({title:'',title_ar:'',intro:'',intro_ar:'',ask_emp:false,ask_role:true,show_score:true,is_open:false,questions:[]});
+ app.querySelectorAll('[data-e]').forEach(b=>b.onclick=async()=>{const {data}=await sb.from('surveys').select('*').eq('id',b.dataset.e).single();edit(data)});
+ app.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>results(b.dataset.r));
+ app.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>share(surveys.find(s=>s.id===b.dataset.l)));
+}
+
+function share(s){
+ const url=linkOf(s.id);
+ app.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(s.title_ar||s.title)}</h2><button id="back">رجوع</button></div>
+ ${s.is_open?'':'<p class="err">الاستبيان مغلق — افتحه من «تعديل» قبل ما ترسل الرابط.</p>'}
+ <div class="qr" style="margin-top:12px"><div id="qrbox"></div><div style="flex:1;min-width:240px"><label class="f">رابط الأطباء</label><input class="ltr" readonly value="${url}" id="lk">
+ <div class="row" style="margin-top:10px"><button class="p" id="cp">نسخ الرابط</button><button id="dl">تحميل QR</button><a href="${url}" target="_blank"><button>فتح كطبيب</button></a></div></div></div></div>`;
+ new QRCode(document.getElementById('qrbox'),{text:url,width:180,height:180,correctLevel:QRCode.CorrectLevel.M});
+ document.getElementById('back').onclick=loadList;
+ document.getElementById('cp').onclick=async()=>{try{await navigator.clipboard.writeText(url);document.getElementById('cp').textContent='✅ تم النسخ'}catch(e){document.getElementById('lk').select()}};
+ document.getElementById('dl').onclick=()=>{const c=document.querySelector('#qrbox canvas');const a=document.createElement('a');a.download='QR - '+(s.title_ar||s.title)+'.png';a.href=c.toDataURL('image/png');a.click()};
+}
+
+// ---------- editor ----------
+function edit(s){
+ cur=JSON.parse(JSON.stringify(s));
+ const optLines=q=>(q.options||[]).map(o=>o.en&&o.ar&&o.en!==o.ar?`${o.en} | ${o.ar}`:(o.en||o.ar)).join('\n');
+ const qHtml=(q,i)=>`<div class="qe" data-i="${i}"><div class="hd"><b>سؤال ${i+1}</b><div class="row">
+  <select data-k="type" style="width:auto">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${q.type===k?'selected':''}>${v}</option>`).join('')}</select>
+  <button class="sm" data-up>↑</button><button class="sm" data-dn>↓</button><button class="sm d" data-del>حذف</button></div></div>
+  <div class="grid2"><div><label class="f">السؤال (English)</label><textarea class="ltr" data-k="t">${esc(q.t)}</textarea></div><div><label class="f">السؤال (عربي)</label><textarea data-k="t_ar">${esc(q.t_ar)}</textarea></div></div>
+  ${q.type==='single'||q.type==='multi'?`<label class="f">الخيارات — كل خيار في سطر: English | عربي</label><textarea class="ltr" data-k="opts" style="min-height:100px">${esc(optLines(q))}</textarea>`:''}
+  ${q.type==='single'?`<label class="f">الإجابة الصحيحة (تنحسب درجة)</label><select data-k="correct"><option value="">— بدون إجابة صحيحة (رأي) —</option>${(q.options||[]).map((o,j)=>`<option value="${j}" ${q.correct===j?'selected':''}>${j+1}. ${esc(o.en||o.ar)}</option>`).join('')}</select>`:''}
+  <div class="grid2"><div><label class="f">القسم (English | عربي) — اختياري</label><input data-k="section" value="${esc(q.section)}"></div><div class="chk" style="margin-top:28px"><input type="checkbox" data-k="optional" ${q.optional?'checked':''}><span>اختياري</span></div></div></div>`;
+ app.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">${s.id?'تعديل الاستبيان':'استبيان جديد'}</h2><div class="row"><button id="back">رجوع</button><button class="p" id="save">حفظ</button></div></div><p class="err" id="em"></p>
+ <div class="grid2"><div><label class="f">العنوان (English)</label><input class="ltr" id="title" value="${esc(s.title)}"></div><div><label class="f">العنوان (عربي)</label><input id="title_ar" value="${esc(s.title_ar)}"></div>
+ <div><label class="f">مقدمة (English)</label><textarea class="ltr" id="intro">${esc(s.intro)}</textarea></div><div><label class="f">مقدمة (عربي)</label><textarea id="intro_ar">${esc(s.intro_ar)}</textarea></div></div>
+ <div class="chk"><input type="checkbox" id="is_open" ${s.is_open?'checked':''}><b>مفتوح لاستقبال الردود</b></div>
+ <div class="chk"><input type="checkbox" id="ask_emp" ${s.ask_emp?'checked':''}><span>يطلب الرقم الوظيفي (وإلا بدون اسم) — رد واحد لكل رقم</span></div>
+ <div class="chk"><input type="checkbox" id="ask_role" ${s.ask_role?'checked':''}><span>يسأل عن المسمى الوظيفي وسنوات الخبرة</span></div>
+ <div class="chk"><input type="checkbox" id="show_score" ${s.show_score?'checked':''}><span>يظهر للطبيب درجته بعد الإرسال</span></div></div>
+ <div class="card"><h2>الأسئلة (${cur.questions.length})</h2><div id="qs">${cur.questions.map(qHtml).join('')}</div><button id="add">＋ إضافة سؤال</button></div>`;
+ const sync=()=>{
+  ['title','title_ar','intro','intro_ar'].forEach(k=>cur[k]=document.getElementById(k).value.trim());
+  ['is_open','ask_emp','ask_role','show_score'].forEach(k=>cur[k]=document.getElementById(k).checked);
+  app.querySelectorAll('.qe').forEach(el=>{const q=cur.questions[+el.dataset.i];
+   const g=k=>el.querySelector(`[data-k="${k}"]`);
+   q.type=g('type').value;q.t=g('t').value.trim();q.t_ar=g('t_ar').value.trim();q.section=g('section').value.trim();q.optional=g('optional').checked;
+   if(g('opts'))q.options=g('opts').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const[a,b]=l.split('|').map(x=>x.trim());return{en:a,ar:b||a}});
+   if(q.type!=='single'&&q.type!=='multi')delete q.options;
+   if(g('correct')&&g('correct').value!=='')q.correct=+g('correct').value;else delete q.correct;
+   if(q.correct!=null&&(!q.options||q.correct>=q.options.length))delete q.correct;});
+ };
+ const redraw=()=>{sync();edit(cur)};
+ document.getElementById('back').onclick=loadList;
+ document.getElementById('add').onclick=()=>{sync();cur.questions.push({id:'q'+Date.now().toString(36),type:'single',t:'',t_ar:'',options:[]});edit(cur)};
+ app.querySelectorAll('.qe').forEach(el=>{const i=+el.dataset.i;
+  el.querySelector('[data-k="type"]').onchange=redraw;
+  el.querySelector('[data-k="opts"]')?.addEventListener('blur',redraw);
+  el.querySelector('[data-del]').onclick=()=>{sync();if(confirm('حذف هذا السؤال؟')){cur.questions.splice(i,1);edit(cur)}};
+  el.querySelector('[data-up]').onclick=()=>{sync();if(i>0){[cur.questions[i-1],cur.questions[i]]=[cur.questions[i],cur.questions[i-1]];edit(cur)}};
+  el.querySelector('[data-dn]').onclick=()=>{sync();if(i<cur.questions.length-1){[cur.questions[i+1],cur.questions[i]]=[cur.questions[i],cur.questions[i+1]];edit(cur)}};});
+ document.getElementById('save').onclick=async()=>{
+  sync();const em=document.getElementById('em');em.textContent='';
+  if(!cur.title&&!cur.title_ar)return em.textContent='اكتب عنوان الاستبيان.';
+  const bad=cur.questions.findIndex(q=>!(q.t||q.t_ar)||((q.type==='single'||q.type==='multi')&&!(q.options||[]).length));
+  if(bad>=0)return em.textContent=`السؤال ${bad+1} ناقص (نص السؤال أو الخيارات).`;
+  const row={title:cur.title||cur.title_ar,title_ar:cur.title_ar,intro:cur.intro,intro_ar:cur.intro_ar,is_open:cur.is_open,ask_emp:cur.ask_emp,ask_role:cur.ask_role,show_score:cur.show_score,questions:cur.questions};
+  const r=cur.id?await sb.from('surveys').update(row).eq('id',cur.id):await sb.from('surveys').insert(row);
+  if(r.error)return em.textContent=r.error.message;loadList();
+ };
+}
+
+// ---------- results ----------
+async function results(id){
+ app.innerHTML='<div class="msg">جاري تحميل النتائج…</div>';
+ const [{data:s},{data:rows}]=await Promise.all([sb.from('surveys').select('*').eq('id',id).single(),sb.from('responses').select('*').eq('survey_id',id).order('created_at')]);
+ const R=rows||[];const scored=s.questions.filter(q=>q.correct!=null);
+ const pct=(a,b)=>b?Math.round(100*a/b):0;
+ const col=p=>p>=80?'var(--green)':p>=60?'var(--amber)':'var(--red)';
+ const bar=(p,c)=>`<div class="bar"><i style="width:${p}%;background:${c||col(p)}"></i></div>`;
+ const avg=R.length&&scored.length?R.reduce((a,r)=>a+r.score/r.total,0)/R.length*100:0;
+ const group=(key,labels)=>labels.map((l,i)=>{const g=R.filter(r=>r.answers[key]===i);return{l,n:g.length,p:g.length&&scored.length?Math.round(g.reduce((a,r)=>a+r.score/r.total,0)/g.length*100):null}});
+ const qStats=scored.map((q,i)=>{const n=R.filter(r=>r.answers[q.id]!=null).length;const ok=R.filter(r=>r.answers[q.id]===q.correct).length;
+  const dist=(q.options||[]).map((o,j)=>({o,j,c:R.filter(r=>r.answers[q.id]===j).length}));
+  const wrong=dist.filter(d=>d.j!==q.correct).sort((a,b)=>b.c-a.c)[0];return{q,n,ok,p:pct(ok,n),wrong,num:s.questions.indexOf(q)+1}});
+ let html=`<div class="card"><div class="row" style="justify-content:space-between"><div><h2 style="margin:0">${esc(s.title_ar||s.title)}</h2><div class="opt">${esc(s.title_ar?s.title:'')}</div></div><div class="row"><button id="back">رجوع</button><button id="sh">الرابط و QR</button><button class="p" id="xl">تصدير Excel</button></div></div></div>`;
+ html+=`<div class="kpis"><div class="kpi"><div class="v">${R.length}</div><div class="l">عدد الردود</div></div>`;
+ if(scored.length)html+=`<div class="kpi"><div class="v" style="color:${col(avg)}">${Math.round(avg)}%</div><div class="l">متوسط الدرجة (${scored.length} سؤال معرفة)</div></div>
+  <div class="kpi"><div class="v">${R.filter(r=>r.score/r.total>=.8).length}</div><div class="l">حصلوا 80% فأكثر</div></div>
+  <div class="kpi"><div class="v" style="color:var(--red)">${R.filter(r=>r.score/r.total<.6).length}</div><div class="l">أقل من 60% (يحتاجون تدريب)</div></div>`;
+ html+=`</div>`;
+ if(!R.length){app.innerHTML=html+'<div class="card msg">ما فيه ردود للحين.</div>';wire();return}
+ if(scored.length){
+  html+=`<div class="card"><h2>نسبة الإجابة الصحيحة لكل سؤال — الأضعف أولاً</h2><table><tr><th>#</th><th>السؤال</th><th style="width:170px">صح</th><th>أكثر إجابة خاطئة</th></tr>`+
+  [...qStats].sort((a,b)=>a.p-b.p).map(x=>`<tr><td>${x.num}</td><td>${esc(x.q.t_ar||x.q.t)}<div class="opt ltr">${esc(x.q.t_ar?x.q.t:'')}</div><div class="opt">الصحيحة: ${esc(x.q.options[x.q.correct].en)}</div></td><td><b style="color:${col(x.p)}">${x.p}%</b> (${x.ok}/${x.n})${bar(x.p)}</td><td>${x.wrong&&x.wrong.c?`${esc(x.wrong.o.en)} <span class="opt">(${x.wrong.c})</span>`:'—'}</td></tr>`).join('')+`</table></div>`;
+  if(s.ask_role){
+   const tb=(t,rows)=>`<div><h3>${t}</h3><table><tr><th></th><th>العدد</th><th style="width:45%">متوسط الدرجة</th></tr>${rows.filter(r=>r.n).map(r=>`<tr><td>${r.l}</td><td>${r.n}</td><td><b style="color:${col(r.p)}">${r.p}%</b>${bar(r.p)}</td></tr>`).join('')}</table></div>`;
+   html+=`<div class="card"><h2>حسب الفئة</h2><div class="grid2">${tb('المسمى الوظيفي',group('_role',ROLES))}${tb('سنوات الخبرة',group('_exp',EXPS))}</div></div>`;
+  }
+ }
+ const other=s.questions.filter(q=>q.correct==null);
+ if(other.length){
+  html+=`<div class="card"><h2>أسئلة الرأي والممارسة</h2>`;
+  for(const q of other){
+   html+=`<h3>${s.questions.indexOf(q)+1}. ${esc(q.t_ar||q.t)}</h3>`;
+   if(q.type==='text'){const t=R.map(r=>r.answers[q.id]).filter(Boolean);html+=t.length?'<ul>'+t.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':'<div class="opt">لا توجد ردود.</div>'}
+   else if(q.type==='scale'){const v=R.map(r=>r.answers[q.id]).filter(x=>x!=null);const m=v.length?(v.reduce((a,b)=>a+b,0)/v.length):0;
+    html+=`<table>${[1,2,3,4,5].map(k=>{const c=v.filter(x=>x===k).length;return`<tr><td style="width:40px">${k}</td><td style="width:60px">${c}</td><td>${bar(pct(c,v.length),'var(--blue)')}</td></tr>`}).join('')}</table><div>المتوسط: <b>${m.toFixed(1)} / 5</b></div>`}
+   else{const tot=R.filter(r=>r.answers[q.id]!=null).length;
+    html+=`<table>${q.options.map((o,j)=>{const c=R.filter(r=>q.type==='multi'?(r.answers[q.id]||[]).includes(j):r.answers[q.id]===j).length;return`<tr><td>${esc(o.ar||o.en)}<div class="opt ltr">${esc(o.ar&&o.ar!==o.en?o.en:'')}</div></td><td style="width:90px">${c} (${pct(c,tot)}%)</td><td style="width:35%">${bar(pct(c,tot),'var(--blue)')}</td></tr>`}).join('')}</table>`}
+  }
+  html+=`</div>`;
+ }
+ html+=`<div class="card"><h2>الردود</h2><div style="overflow:auto"><table><tr><th>#</th><th>الوقت</th>${s.ask_emp?'<th>الرقم الوظيفي</th>':''}${s.ask_role?'<th>المسمى</th><th>الخبرة</th>':''}${scored.length?'<th>الدرجة</th>':''}</tr>`+
+  R.map((r,i)=>{const p=pct(r.score,r.total);return`<tr><td>${i+1}</td><td class="ltr">${new Date(r.created_at).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'})}</td>${s.ask_emp?`<td class="ltr">${esc(r.emp_no)}</td>`:''}${s.ask_role?`<td>${ROLES[r.answers._role]||''}</td><td>${EXPS[r.answers._exp]||''}</td>`:''}${scored.length?`<td><b style="color:${col(p)}">${r.score}/${r.total}</b> (${p}%)</td>`:''}</tr>`}).join('')+`</table></div></div>`;
+ app.innerHTML=html;wire();
+ function wire(){
+  document.getElementById('back').onclick=loadList;
+  document.getElementById('sh').onclick=()=>share(s);
+  document.getElementById('xl').onclick=()=>{
+   const text=(q,v)=>v==null?'':q.type==='text'||q.type==='scale'?v:q.type==='multi'?(v||[]).map(j=>q.options[j]?.en).join(', '):(q.options[v]?.en??'');
+   const rowsX=R.map((r,i)=>{const o={'#':i+1,'Time':new Date(r.created_at).toLocaleString('en-GB')};
+    if(s.ask_emp)o['Employee no']=r.emp_no;if(s.ask_role){o['Position']=ROLES[r.answers._role]||'';o['Experience']=EXPS[r.answers._exp]||''}
+    if(scored.length){o['Score']=`${r.score}/${r.total}`;o['%']=pct(r.score,r.total)}
+    s.questions.forEach((q,k)=>{const v=r.answers[q.id];o[`Q${k+1} ${(q.t||q.t_ar).slice(0,40)}`]=(q.correct!=null?(v===q.correct?'✓ ':'✗ '):'')+text(q,v)});return o});
+   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rowsX),'Responses');
+   if(scored.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(qStats.map(x=>({'Q':x.num,'Question':x.q.t||x.q.t_ar,'Correct answer':x.q.options[x.q.correct].en,'Answered':x.n,'Correct':x.ok,'% correct':x.p,'Most common wrong':x.wrong&&x.wrong.c?x.wrong.o.en:''}))),'Per question');
+   XLSX.writeFile(wb,`${(s.title||'survey').slice(0,60)} - results.xlsx`);
+  };
+ }
+}
+</script>
+</body>
+</html>
