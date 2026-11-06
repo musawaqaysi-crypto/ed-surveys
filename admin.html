@@ -72,23 +72,51 @@ const EXPS=['< 2','2–5','6–10','> 10'];
 const TYPES={single:'اختيار واحد',multi:'اختيار متعدد',scale:'مقياس 1–5',text:'نص حر'};
 let surveys=[],cur=null,view='list';
 
+// password sign-in; the e-mail is remembered on this device so only the password is asked. The e-mail link stays as the fallback.
+const savedEmail=()=>{try{return localStorage.getItem('sv-admin-email')||''}catch(e){return''}};
+const keepEmail=v=>{try{v?localStorage.setItem('sv-admin-email',v):localStorage.removeItem('sv-admin-email')}catch(e){}};
 function login(note){
  document.getElementById('who').innerHTML='';
+ const se=savedEmail();
  app.innerHTML=`<div class="card" style="max-width:420px;margin:30px auto"><h2>دخول المسؤول</h2>
- <label class="f">البريد الإلكتروني</label><input id="em" class="ltr" type="email" autocomplete="email">
- <div class="row" style="margin-top:12px"><button class="p" id="go">أرسل رابط الدخول</button></div><p id="lm" class="opt">${note||'يوصلك رابط على بريدك، افتحه من نفس الجهاز.'}</p></div>`;
- document.getElementById('go').onclick=async()=>{
-  const email=document.getElementById('em').value.trim();if(!email)return;
+ <form id="lf"><div ${se?'hidden':''} id="emw"><label class="f">البريد الإلكتروني</label><input id="em" class="ltr" type="email" autocomplete="username" value="${esc(se)}"></div>
+ <label class="f">الرقم السري</label><input id="pw" class="ltr" type="password" autocomplete="current-password">
+ <div class="row" style="margin-top:12px"><button class="p">دخول</button></div></form>
+ <p id="lm" class="opt">${note||''}</p>
+ <p class="opt"><a href="#" id="fg">نسيت الرقم السري أو أول مرة؟ أرسل رابط دخول على الإيميل</a>${se?' · <a href="#" id="ec">تغيير الإيميل</a>':''}</p></div>`;
+ const lm=document.getElementById('lm'),em=document.getElementById('em');
+ document.getElementById('lf').onsubmit=async e=>{e.preventDefault();
+  const email=em.value.trim(),pw=document.getElementById('pw');
+  const {error}=await sb.auth.signInWithPassword({email,password:pw.value});pw.value='';
+  if(error)return lm.innerHTML='<span class="err">الرقم السري أو الإيميل غير صحيح. إذا ما اخترت رقماً سرياً بعد، ادخل برابط الإيميل أول.</span>';
+  keepEmail(email)};
+ document.getElementById('fg').onclick=async e=>{e.preventDefault();
+  const email=em.value.trim();if(!email){document.getElementById('emw').hidden=false;em.focus();return lm.textContent='اكتب إيميلك أول، ثم اضغط الرابط مرة ثانية.'}
   const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:location.href.split('#')[0]}});
-  document.getElementById('lm').innerHTML=error?`<span class="err">${esc(error.message)}</span>`:'✅ أرسلنا رابط الدخول لبريدك. افتحه من هذا الجهاز.';
- };
+  lm.innerHTML=error?`<span class="err">${esc(error.message)}</span>`:'✅ أرسلنا رابط الدخول لبريدك. افتحه من هذا الجهاز، وبعدها اختر رقمك السري من زر «الرقم السري».';if(!error)keepEmail(email)};
+ const ec=document.getElementById('ec');if(ec)ec.onclick=e=>{e.preventDefault();keepEmail('');login()};
+}
+function changePw(){
+ app.innerHTML=`<div class="card" style="max-width:420px;margin:30px auto"><h2>الرقم السري</h2><p class="opt">٨ خانات أو أكثر. بعدها تدخل به بدل الإيميل.</p>
+ <form id="pf"><label class="f">الرقم السري الجديد</label><input id="p1" class="ltr" type="password" autocomplete="new-password">
+ <label class="f">أعده مرة ثانية</label><input id="p2" class="ltr" type="password" autocomplete="new-password">
+ <div class="row" style="margin-top:12px"><button class="p">حفظ</button><button type="button" id="pc">إلغاء</button></div></form><p id="pm" class="opt"></p></div>`;
+ document.getElementById('pc').onclick=loadList;
+ document.getElementById('pf').onsubmit=async e=>{e.preventDefault();const a=document.getElementById('p1').value,b=document.getElementById('p2').value,pm=document.getElementById('pm');
+  if(a.length<8)return pm.innerHTML='<span class="err">الرقم السري لازم يكون ٨ خانات أو أكثر.</span>';
+  if(a!==b)return pm.innerHTML='<span class="err">الرقمين مو متطابقين.</span>';
+  const {error}=await sb.auth.updateUser({password:a});
+  if(error)return pm.innerHTML=`<span class="err">${esc(error.message)}</span>`;
+  alert('✅ انحفظ الرقم السري. المرة الجاية ادخل به.');loadList()};
 }
 async function enter(session){
  if(!session)return login();
  const {data}=await sb.from('admins').select('user_id').eq('user_id',session.user.id);
  if(!data||!data.length){await sb.auth.signOut();return login('<span class="err">هذا الحساب ليس مسؤولاً.</span>')}
- document.getElementById('who').innerHTML=`<button class="sm" id="out">خروج</button>`;
+ if(session.user.email)keepEmail(session.user.email);
+ document.getElementById('who').innerHTML=`<button class="sm" id="pwb">الرقم السري</button> <button class="sm" id="out">خروج</button>`;
  document.getElementById('out').onclick=()=>sb.auth.signOut();
+ document.getElementById('pwb').onclick=changePw;
  await loadList();
 }
 // supabase-js deadlocks if the auth callback awaits another Supabase call, so the admin check runs after it returns.
